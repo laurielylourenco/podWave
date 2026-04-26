@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Episode } from '@/shared/types/podcast'
+import { mmkvZustandStorage } from '@/shared/storage/mmkv'
 
 interface PlayerState {
   currentEpisode: Episode | null
@@ -22,37 +24,53 @@ interface PlayerState {
   clearQueue: () => void
 }
 
-export const usePlayerStore = create<PlayerState>((set) => ({
-  currentEpisode: null,
-  queue: [],
-  isPlaying: false,
-  position: 0,
-  duration: 0,
-  speed: 1,
-  sleepTimerMinutes: null,
+export const usePlayerStore = create<PlayerState>()(
+  persist(
+    (set) => ({
+      currentEpisode: null,
+      queue: [],
+      isPlaying: false,
+      position: 0,
+      duration: 0,
+      speed: 1,
+      sleepTimerMinutes: null,
 
-  setCurrentEpisode: (episode) => set({ currentEpisode: episode }),
-  setIsPlaying: (isPlaying) => set({ isPlaying }),
-  setPosition: (position) => set({ position }),
-  setDuration: (duration) => set({ duration }),
-  setSpeed: (speed) => set({ speed }),
-  setSleepTimer: (sleepTimerMinutes) => set({ sleepTimerMinutes }),
+      setCurrentEpisode: (episode) => set({ currentEpisode: episode }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      setPosition: (position) => set({ position }),
+      setDuration: (duration) => set({ duration }),
+      setSpeed: (speed) => set({ speed }),
+      setSleepTimer: (sleepTimerMinutes) => set({ sleepTimerMinutes }),
 
-  addToQueue: (episode) =>
-    set((state) => ({ queue: [...state.queue, episode] })),
+      addToQueue: (episode) => set((state) => ({ queue: [...state.queue, episode] })),
 
-  removeFromQueue: (episodeId) =>
-    set((state) => ({
-      queue: state.queue.filter((e) => e.id !== episodeId),
-    })),
+      removeFromQueue: (episodeId) =>
+        set((state) => ({
+          queue: state.queue.filter((e) => e.id !== episodeId),
+        })),
 
-  reorderQueue: (from, to) =>
-    set((state) => {
-      const queue = [...state.queue]
-      const [moved] = queue.splice(from, 1)
-      queue.splice(to, 0, moved)
-      return { queue }
+      reorderQueue: (from, to) =>
+        set((state) => {
+          const queue = [...state.queue]
+          const [moved] = queue.splice(from, 1)
+          if (!moved) return { queue: state.queue }
+          queue.splice(to, 0, moved)
+          return { queue }
+        }),
+
+      clearQueue: () => set({ queue: [] }),
     }),
-
-  clearQueue: () => set({ queue: [] }),
-}))
+    {
+      name: 'player-store',
+      storage: mmkvZustandStorage,
+      partialize: (state) => ({
+        currentEpisode: state.currentEpisode,
+        queue: state.queue,
+        position: state.position,
+        duration: state.duration,
+        speed: state.speed,
+        sleepTimerMinutes: state.sleepTimerMinutes,
+      }),
+    }
+  )
+)
