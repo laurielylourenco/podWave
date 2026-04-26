@@ -19,15 +19,17 @@ O **Podwave** é um player de podcasts completo para iOS e Android. Ele permite 
 | Cache e loading states com TanStack Query | ✅ Concluído |
 | Tela de detalhes com lista de episódios | ✅ Concluído |
 | Assinaturas com feed unificado de episódios | 🔲 Fase 4 |
-| Player: play/pause, seek ±15s, velocidade | 🔲 Fase 3 |
-| Sleep timer | 🔲 Fase 3 |
-| Fila drag-and-drop | 🔲 Fase 3 |
-| Controles na lock screen e notificação | 🔲 Fase 3 |
+| Player: play/pause, seek ±15s, velocidade | ✅ Concluído* |
+| Sleep timer | ✅ Concluído* |
+| Fila drag-and-drop | ✅ Concluído* |
+| Controles na lock screen e notificação | ✅ Concluído* |
 | Mini-player persistente | 🔲 Fase 4 |
 | Player expandido (modal) | 🔲 Fase 4 |
 | Download offline de episódios | 🔲 Fase 5 |
 | Histórico e retomada de posição | 🔲 Fase 5 |
 | Bookmarks | 🔲 Fase 5 |
+
+> \* O player via `react-native-track-player` **não roda no Expo Go** e **não toca áudio no Web**. Para testar, use **dev build / `expo run:*`**.
 
 ---
 
@@ -118,11 +120,13 @@ react-native-track-player toca o áudio  ← Fase 3
 - [x] Tela de Busca com grid de resultados
 - [x] Tela de Detalhe com lista de episódios
 
-### Fase 3 — Player de Áudio
-- [ ] react-native-track-player em background
-- [ ] Play/pause, seek ±15s, velocidade (0.5×–2×)
-- [ ] Sleep timer e fila drag-and-drop
-- [ ] Controles nativos (lock screen / notificação)
+### Fase 3 — Player de Áudio ✅*
+- [x] react-native-track-player em background
+- [x] Play/pause, seek ±15s, velocidade (0.5×–2×)
+- [x] Sleep timer e fila drag-and-drop
+- [x] Controles nativos (lock screen / notificação)
+
+> \* Funciona em **dev build / builds nativos** (não em Expo Go/Web).
 
 ### Fase 4 — UI/UX
 - [ ] Mini-player persistente
