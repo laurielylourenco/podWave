@@ -41,9 +41,9 @@ export default function PodcastScreen() {
 
   const currentEpisodeId = usePlayerStore((s) => s.currentEpisode?.id)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
-  const isSubscribed = useSubscriptionsStore((s) => s.isSubscribed)
   const subscribe = useSubscriptionsStore((s) => s.subscribe)
   const unsubscribe = useSubscriptionsStore((s) => s.unsubscribe)
+  const subscribed = useSubscriptionsStore((s) => s.subscriptions.some((p) => p.id === id))
 
   const podcast: Podcast = {
     id,
@@ -55,8 +55,6 @@ export default function PodcastScreen() {
     categories: [],
     episodeCount: episodes?.length ?? 0,
   }
-
-  const subscribed = isSubscribed(id)
 
   function handleEpisodePress(episode: Episode) {
     void playerActions.playEpisode(episode)
