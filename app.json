@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "podwave-temp",
-    "slug": "podwave-temp",
+    "name": "Podwave",
+    "slug": "podwave",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "podwavetemp",
+    "scheme": "podwave",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -17,6 +17,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.lauri.podwave",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
