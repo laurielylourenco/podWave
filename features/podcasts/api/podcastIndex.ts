@@ -1,20 +1,17 @@
 import type { Podcast, Episode } from '@/shared/types/podcast'
+import * as Crypto from 'expo-crypto'
 
 const BASE_URL = 'https://api.podcastindex.org/api/1.0'
 
 const API_KEY = process.env.EXPO_PUBLIC_PODCAST_INDEX_KEY ?? ''
 const API_SECRET = process.env.EXPO_PUBLIC_PODCAST_INDEX_SECRET ?? ''
 
-async function sha1Hex(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 async function buildHeaders(): Promise<HeadersInit> {
   const authDate = Math.floor(Date.now() / 1000).toString()
-  const hash = await sha1Hex(`${API_KEY}${API_SECRET}${authDate}`)
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA1,
+    `${API_KEY}${API_SECRET}${authDate}`
+  )
 
   return {
     'X-Auth-Key': API_KEY,
@@ -48,7 +45,7 @@ export async function searchPodcasts(term: string): Promise<Podcast[]> {
   )
 }
 
-export async function getEpisodes(feedId: string): Promise<Episode[]> {
+export async function getEpisodesByFeedId(feedId: string): Promise<Episode[]> {
   const response = await fetch(
     `${BASE_URL}/episodes/byfeedid?id=${feedId}&max=50`,
     { headers: await buildHeaders() }
@@ -62,6 +59,32 @@ export async function getEpisodes(feedId: string): Promise<Episode[]> {
     (item: Record<string, unknown>): Episode => ({
       id: String(item.id),
       podcastId: feedId,
+      podcastTitle: String(item.feedTitle ?? ''),
+      title: String(item.title ?? ''),
+      description: String(item.description ?? ''),
+      audioUrl: String(item.enclosureUrl ?? ''),
+      imageUrl: String(item.image ?? item.feedImage ?? ''),
+      duration: Number(item.duration ?? 0),
+      publishedAt: new Date(Number(item.datePublished ?? 0) * 1000).toISOString(),
+      isDownloaded: false,
+    })
+  )
+}
+
+export async function getEpisodesByFeedUrl(feedUrl: string): Promise<Episode[]> {
+  const response = await fetch(
+    `${BASE_URL}/episodes/byfeedurl?url=${encodeURIComponent(feedUrl)}&max=50`,
+    { headers: await buildHeaders() }
+  )
+
+  if (!response.ok) throw new Error('Falha ao buscar episódios')
+
+  const data = await response.json()
+
+  return (data.items ?? []).map(
+    (item: Record<string, unknown>): Episode => ({
+      id: String(item.id),
+      podcastId: String(item.feedId ?? ''),
       podcastTitle: String(item.feedTitle ?? ''),
       title: String(item.title ?? ''),
       description: String(item.description ?? ''),

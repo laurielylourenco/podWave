@@ -16,16 +16,21 @@ import type { Episode } from '@/shared/types/podcast'
 
 export default function PodcastScreen() {
   const router = useRouter()
-  const { id, title, author, imageUrl } = useLocalSearchParams<{
+  const { id, title, author, imageUrl, feedUrl } = useLocalSearchParams<{
     id: string
     title: string
     author: string
     imageUrl: string
+    feedUrl?: string
   }>()
 
   const [descExpanded, setDescExpanded] = useState(false)
 
-  const { data: episodes, isLoading, isError, refetch } = useEpisodes(id ?? '')
+  const decodedFeedUrl = feedUrl ? decodeURIComponent(feedUrl) : undefined
+  const { data: episodes, isLoading, isError, refetch } = useEpisodes({
+    feedId: id,
+    feedUrl: decodedFeedUrl,
+  })
 
   function handleEpisodePress(_episode: Episode) {
     // Fase 3: integrar com player

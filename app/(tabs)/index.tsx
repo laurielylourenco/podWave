@@ -21,7 +21,13 @@ export default function SearchScreen() {
   const { data: podcasts, isLoading, isError } = useSearchPodcasts(debouncedQuery)
 
   function handlePodcastPress(podcast: Podcast) {
-    router.push(`/podcast/${podcast.id}?feedUrl=${encodeURIComponent(podcast.feedUrl)}&title=${encodeURIComponent(podcast.title)}&imageUrl=${encodeURIComponent(podcast.imageUrl)}&author=${encodeURIComponent(podcast.author)}`)
+    router.push(
+      `/podcast/${encodeURIComponent(podcast.id)}?feedUrl=${encodeURIComponent(
+        podcast.feedUrl
+      )}&title=${encodeURIComponent(podcast.title)}&imageUrl=${encodeURIComponent(
+        podcast.imageUrl
+      )}&author=${encodeURIComponent(podcast.author)}`
+    )
   }
 
   return (
