@@ -7,10 +7,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import TrackPlayer from 'react-native-track-player';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { setupPlayer } from '@/features/player/services/trackPlayerService';
+import { registerPlaybackService, setupPlayer } from '@/features/player/services/trackPlayerService';
 import playbackService from '@/features/player/services/playbackService';
 
 export {
@@ -20,8 +19,6 @@ export {
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
-
-TrackPlayer.registerPlaybackService(() => playbackService);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,7 +39,11 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
-    void setupPlayer();
+    // TrackPlayer não está disponível no Expo Go; aqui fazemos init “best-effort”.
+    void (async () => {
+      await registerPlaybackService(() => playbackService);
+      await setupPlayer();
+    })();
   }, []);
 
   if (!loaded) {

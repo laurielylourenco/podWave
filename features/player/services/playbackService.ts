@@ -1,8 +1,10 @@
-import TrackPlayer, { Event } from 'react-native-track-player'
-
 // Este módulo é executado em uma thread separada pelo react-native-track-player
 // para responder a controles remotos (lock screen, notificação, fone de ouvido).
 export default async function playbackService() {
+  const mod: any = await import('react-native-track-player')
+  const TrackPlayer = mod.default ?? mod
+  const { Event } = mod
+
   TrackPlayer.addEventListener(Event.RemotePlay, () => {
     void TrackPlayer.play()
   })

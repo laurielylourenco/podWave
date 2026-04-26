@@ -1,9 +1,31 @@
-import TrackPlayer, { State } from 'react-native-track-player'
 import { usePlayerStore } from '@/store/playerStore'
 import type { Episode } from '@/shared/types/podcast'
 import { episodeToTrack } from '@/features/player/utils/episodeToTrack'
+import { Platform } from 'react-native'
+import Constants from 'expo-constants'
+
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo'
+}
+
+async function loadTrackPlayer(): Promise<null | { TrackPlayer: any; State: any }> {
+  if (Platform.OS === 'web') return null
+  if (isExpoGo()) return null
+  try {
+    const mod: any = await import('react-native-track-player')
+    return { TrackPlayer: mod.default ?? mod, State: mod.State }
+  } catch {
+    return null
+  }
+}
 
 export async function playEpisode(episode: Episode): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) {
+    console.warn('[TrackPlayer] indisponível (Expo Go/web).')
+    return
+  }
+  const { TrackPlayer } = loaded
   const store = usePlayerStore.getState()
   const track = episodeToTrack(episode)
 
@@ -22,6 +44,9 @@ export async function playEpisode(episode: Episode): Promise<void> {
 }
 
 export async function togglePlayPause(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer, State } = loaded
   const state = await TrackPlayer.getState()
   const store = usePlayerStore.getState()
 
@@ -35,25 +60,40 @@ export async function togglePlayPause(): Promise<void> {
 }
 
 export async function seekForward(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   const { position } = await TrackPlayer.getProgress()
   await TrackPlayer.seekTo(position + 15)
 }
 
 export async function seekBackward(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   const { position } = await TrackPlayer.getProgress()
   await TrackPlayer.seekTo(Math.max(0, position - 15))
 }
 
 export async function seekTo(seconds: number): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   await TrackPlayer.seekTo(seconds)
 }
 
 export async function setPlaybackSpeed(speed: number): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   await TrackPlayer.setRate(speed)
   usePlayerStore.getState().setSpeed(speed)
 }
 
 export async function skipToNext(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   try {
     await TrackPlayer.skipToNext()
     const store = usePlayerStore.getState()
@@ -69,6 +109,9 @@ export async function skipToNext(): Promise<void> {
 }
 
 export async function skipToPrevious(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   try {
     await TrackPlayer.skipToPrevious()
     const store = usePlayerStore.getState()
@@ -84,6 +127,13 @@ export async function skipToPrevious(): Promise<void> {
 }
 
 export async function addToQueue(episode: Episode): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) {
+    // Ainda assim mantém no store, para quando estiver em dev build.
+    usePlayerStore.getState().addToQueue(episode)
+    return
+  }
+  const { TrackPlayer, State } = loaded
   const store = usePlayerStore.getState()
   store.addToQueue(episode)
 
@@ -95,6 +145,9 @@ export async function addToQueue(episode: Episode): Promise<void> {
 }
 
 export async function stopPlayer(): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  const { TrackPlayer } = loaded
   await TrackPlayer.reset()
   const store = usePlayerStore.getState()
   store.setIsPlaying(false)

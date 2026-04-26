@@ -1,9 +1,55 @@
-import TrackPlayer, { Capability, RepeatMode } from 'react-native-track-player'
+import { Platform } from 'react-native'
+import Constants from 'expo-constants'
 
 let isSetup = false
 
+function isExpoGo(): boolean {
+  // Expo Go não suporta módulos nativos custom (como react-native-track-player)
+  return Constants.appOwnership === 'expo'
+}
+
+async function loadTrackPlayer(): Promise<null | {
+  TrackPlayer: any
+  Capability: any
+  RepeatMode: any
+}> {
+  if (Platform.OS === 'web') return null
+  if (isExpoGo()) return null
+
+  try {
+    const mod: any = await import('react-native-track-player')
+    return {
+      TrackPlayer: mod.default ?? mod,
+      Capability: mod.Capability,
+      RepeatMode: mod.RepeatMode,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function registerPlaybackService(
+  factory: () => (typeof import('./playbackService')) | any
+): Promise<void> {
+  const loaded = await loadTrackPlayer()
+  if (!loaded) return
+  try {
+    loaded.TrackPlayer.registerPlaybackService(factory)
+  } catch (e) {
+    console.warn('[TrackPlayer] registerPlaybackService error:', e)
+  }
+}
+
 export async function setupPlayer(): Promise<boolean> {
   if (isSetup) return true
+
+  const loaded = await loadTrackPlayer()
+  if (!loaded) {
+    // Não é erro: apenas indisponível (web/Expo Go/sem native module)
+    return false
+  }
+
+  const { TrackPlayer, Capability, RepeatMode } = loaded
 
   try {
     await TrackPlayer.setupPlayer({
