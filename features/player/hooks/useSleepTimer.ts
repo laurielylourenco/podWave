@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import TrackPlayer from 'react-native-track-player'
 import { usePlayerStore } from '@/store/playerStore'
+import { loadTrackPlayer } from '@/features/player/services/trackPlayerLoader'
 
 interface SleepTimerResult {
   timeRemaining: number | null
@@ -47,7 +47,10 @@ export function useSleepTimer(): SleepTimerResult {
     }, 1000)
 
     timeoutRef.current = setTimeout(async () => {
-      await TrackPlayer.pause()
+      const loaded = await loadTrackPlayer()
+      if (loaded?.TrackPlayer) {
+        await loaded.TrackPlayer.pause()
+      }
       clearTimer()
     }, ms)
   }

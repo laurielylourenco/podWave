@@ -1,8 +1,8 @@
-import TrackPlayer, { State } from 'react-native-track-player'
 import { usePlayerStore } from '@/store/playerStore'
 import type { Episode } from '@/shared/types/podcast'
 import { episodeToTrack } from '@/features/player/utils/episodeToTrack'
 import * as playerActions from '@/features/player/services/playerActions'
+import { loadTrackPlayer } from '@/features/player/services/trackPlayerLoader'
 
 export function useQueue() {
   const queue = usePlayerStore((s) => s.queue)
@@ -31,9 +31,12 @@ export function useQueue() {
       store.reorderQueue(newIndex, targetIndex)
     }
 
-    const state = await TrackPlayer.getState()
-    if (state !== State.None && state !== State.Stopped) {
-      await TrackPlayer.add(episodeToTrack(episode), targetIndex)
+    const loaded = await loadTrackPlayer()
+    if (loaded?.TrackPlayer && loaded.State) {
+      const state = await loaded.TrackPlayer.getState()
+      if (state !== loaded.State.None && state !== loaded.State.Stopped) {
+        await loaded.TrackPlayer.add(episodeToTrack(episode), targetIndex)
+      }
     }
   }
 
@@ -45,11 +48,14 @@ export function useQueue() {
     reorderQueue(from, to)
     // Sincroniza no player nativo: remove e re-insere na nova posição
     try {
-      await TrackPlayer.remove(from)
+      const loaded = await loadTrackPlayer()
+      if (!loaded?.TrackPlayer) return
+
+      await loaded.TrackPlayer.remove(from)
       const store = usePlayerStore.getState()
       const movedEpisode = store.queue[to]
       if (movedEpisode) {
-        await TrackPlayer.add(episodeToTrack(movedEpisode), to)
+        await loaded.TrackPlayer.add(episodeToTrack(movedEpisode), to)
       }
     } catch {
       // Player pode não ter track nessa posição
