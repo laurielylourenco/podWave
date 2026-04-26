@@ -1,0 +1,38 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK (EAS)
+        run: eas build --platform android --profile preview --non-interactive --wait
+
+      - name: Baixar APK gerado
+        run: |
+          APK_URL=$(eas build:list --platform android --limit 1 --status finished --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
+          curl -L "$APK_URL" -o podwave.apk
+
+      - name: Upload APK como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: podwave-apk
+          path: podwave.apk
+          retention-days: 30
