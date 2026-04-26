@@ -3,19 +3,24 @@ import {
   FlatList,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { useEpisodes } from '@/features/episodes/hooks/useEpisodes'
 import { EpisodeItem } from '@/shared/components/EpisodeItem'
-import type { Episode } from '@/shared/types/podcast'
+import { Colors, Radius, Spacing, Typography } from '@/shared/theme'
+import { usePlayerStore } from '@/store/playerStore'
+import { useSubscriptionsStore } from '@/store/subscriptionsStore'
+import * as playerActions from '@/features/player/services/playerActions'
+import type { Episode, Podcast } from '@/shared/types/podcast'
 
 export default function PodcastScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { id, title, author, imageUrl, feedUrl } = useLocalSearchParams<{
     id: string
     title: string
@@ -24,23 +29,56 @@ export default function PodcastScreen() {
     feedUrl?: string
   }>()
 
-  const [descExpanded, setDescExpanded] = useState(false)
-
+  const decodedTitle = decodeURIComponent(title ?? '')
+  const decodedAuthor = decodeURIComponent(author ?? '')
+  const decodedImageUrl = imageUrl ? decodeURIComponent(imageUrl) : ''
   const decodedFeedUrl = feedUrl ? decodeURIComponent(feedUrl) : undefined
-  const { data: episodes, isLoading, isError, refetch } = useEpisodes({
+
+  const { data: episodes, isLoading, isError, error, refetch } = useEpisodes({
     feedId: id,
     feedUrl: decodedFeedUrl,
   })
 
-  function handleEpisodePress(_episode: Episode) {
-    // Fase 3: integrar com player
+  const currentEpisodeId = usePlayerStore((s) => s.currentEpisode?.id)
+  const isPlaying = usePlayerStore((s) => s.isPlaying)
+  const isSubscribed = useSubscriptionsStore((s) => s.isSubscribed)
+  const subscribe = useSubscriptionsStore((s) => s.subscribe)
+  const unsubscribe = useSubscriptionsStore((s) => s.unsubscribe)
+
+  const podcast: Podcast = {
+    id,
+    title: decodedTitle,
+    author: decodedAuthor,
+    description: '',
+    imageUrl: decodedImageUrl,
+    feedUrl: decodedFeedUrl ?? '',
+    categories: [],
+    episodeCount: episodes?.length ?? 0,
+  }
+
+  const subscribed = isSubscribed(id)
+
+  function handleEpisodePress(episode: Episode) {
+    void playerActions.playEpisode(episode)
+  }
+
+  function handleSubscribeToggle() {
+    if (subscribed) {
+      unsubscribe(id)
+    } else {
+      subscribe(podcast)
+    }
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.navbar}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backIcon}>‹</Text>
+      <View style={[styles.navbar, { paddingTop: insets.top + Spacing.xs }]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={22} color={Colors.fern} />
           <Text style={styles.backLabel}>Voltar</Text>
         </Pressable>
       </View>
@@ -49,28 +87,47 @@ export default function PodcastScreen() {
         data={episodes ?? []}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <EpisodeItem episode={item} onPress={handleEpisodePress} />
+          <EpisodeItem
+            episode={item}
+            onPress={handleEpisodePress}
+            isPlaying={item.id === currentEpisodeId && isPlaying}
+            isActive={item.id === currentEpisodeId}
+          />
         )}
         ListHeaderComponent={
           <View>
             <View style={styles.hero}>
-              {imageUrl ? (
-                <Image
-                  source={{ uri: decodeURIComponent(imageUrl) }}
-                  style={styles.artwork}
-                />
+              {decodedImageUrl ? (
+                <Image source={{ uri: decodedImageUrl }} style={styles.artwork} />
               ) : (
                 <View style={[styles.artwork, styles.artworkPlaceholder]}>
-                  <Text style={styles.artworkEmoji}>🎙️</Text>
+                  <Ionicons name="mic-outline" size={48} color={Colors.medGrey} />
                 </View>
               )}
               <View style={styles.heroInfo}>
                 <Text style={styles.podcastTitle} numberOfLines={3}>
-                  {decodeURIComponent(title ?? '')}
+                  {decodedTitle}
                 </Text>
                 <Text style={styles.podcastAuthor} numberOfLines={1}>
-                  {decodeURIComponent(author ?? '')}
+                  {decodedAuthor}
                 </Text>
+                <Pressable
+                  onPress={handleSubscribeToggle}
+                  style={({ pressed }) => [
+                    styles.subscribeBtn,
+                    subscribed && styles.subscribeBtnActive,
+                    pressed && styles.subscribeBtnPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={subscribed ? 'bookmark' : 'bookmark-outline'}
+                    size={14}
+                    color={subscribed ? Colors.white : Colors.drySage}
+                  />
+                  <Text style={[styles.subscribeText, subscribed && styles.subscribeTextActive]}>
+                    {subscribed ? 'Assinado' : 'Assinar'}
+                  </Text>
+                </Pressable>
               </View>
             </View>
 
@@ -83,16 +140,24 @@ export default function PodcastScreen() {
 
             {isLoading && (
               <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#6C63FF" />
+                <ActivityIndicator size="large" color={Colors.fern} />
                 <Text style={styles.hint}>Carregando episódios...</Text>
               </View>
             )}
 
             {isError && (
               <View style={styles.centered}>
-                <Text style={styles.errorIcon}>⚠️</Text>
+                <Ionicons name="warning-outline" size={48} color={Colors.medGrey} />
                 <Text style={styles.errorText}>Falha ao carregar episódios.</Text>
-                <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+                {!!error && (
+                  <Text style={styles.errorDetails} numberOfLines={4}>
+                    {error instanceof Error ? error.message : String(error)}
+                  </Text>
+                )}
+                <Pressable
+                  onPress={() => refetch()}
+                  style={({ pressed }) => [styles.retryBtn, pressed && { opacity: 0.7 }]}
+                >
                   <Text style={styles.retryText}>Tentar novamente</Text>
                 </Pressable>
               </View>
@@ -102,7 +167,7 @@ export default function PodcastScreen() {
         ListEmptyComponent={
           !isLoading && !isError ? (
             <View style={styles.centered}>
-              <Text style={styles.emptyIcon}>🎵</Text>
+              <Ionicons name="musical-notes-outline" size={48} color={Colors.medGrey} />
               <Text style={styles.emptyText}>Nenhum episódio encontrado</Text>
             </View>
           ) : null
@@ -117,122 +182,140 @@ export default function PodcastScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: Colors.appBackground,
   },
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2c2c2e',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.appBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: Spacing.xs,
   },
-  backIcon: {
-    color: '#6C63FF',
-    fontSize: 28,
-    fontWeight: '400',
-    lineHeight: 32,
+  backBtnPressed: {
+    opacity: 0.6,
   },
   backLabel: {
-    color: '#6C63FF',
-    fontSize: 17,
+    ...Typography.bodyLg,
+    color: Colors.fern,
+    fontWeight: '500',
   },
   hero: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 16,
+    padding: Spacing.lg,
+    gap: Spacing.base,
     alignItems: 'flex-start',
   },
   artwork: {
     width: 110,
     height: 110,
-    borderRadius: 12,
-    backgroundColor: '#2c2c2e',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.cardBg,
   },
   artworkPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  artworkEmoji: {
-    fontSize: 48,
-  },
   heroInfo: {
     flex: 1,
-    paddingTop: 4,
-    gap: 6,
+    paddingTop: Spacing.xs,
+    gap: Spacing.sm,
   },
   podcastTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 24,
+    ...Typography.title,
+    color: Colors.dustGrey,
+    lineHeight: 26,
   },
   podcastAuthor: {
-    color: '#8e8e93',
-    fontSize: 14,
+    ...Typography.bodySm,
+    color: Colors.drySage,
+  },
+  subscribeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.fern,
+    marginTop: Spacing.xs,
+  },
+  subscribeBtnActive: {
+    backgroundColor: Colors.fern,
+    borderColor: Colors.fern,
+  },
+  subscribeBtnPressed: {
+    opacity: 0.7,
+  },
+  subscribeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.drySage,
+  },
+  subscribeTextActive: {
+    color: Colors.white,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#2c2c2e',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    ...Typography.title,
+    color: Colors.dustGrey,
   },
   episodeCount: {
-    color: '#636366',
-    fontSize: 13,
+    ...Typography.caption,
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: Spacing.xxxl,
   },
   centered: {
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 32,
-    gap: 12,
+    paddingVertical: Spacing.xxxl,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
   },
   hint: {
-    color: '#8e8e93',
-    fontSize: 15,
-  },
-  emptyIcon: {
-    fontSize: 48,
+    ...Typography.bodySm,
+    marginTop: Spacing.sm,
   },
   emptyText: {
-    color: '#8e8e93',
-    fontSize: 15,
+    ...Typography.bodySm,
     textAlign: 'center',
   },
-  errorIcon: {
-    fontSize: 48,
-  },
   errorText: {
-    color: '#ff453a',
-    fontSize: 15,
+    ...Typography.bodySm,
+    color: Colors.error,
+    textAlign: 'center',
+  },
+  errorDetails: {
+    ...Typography.caption,
+    color: Colors.lightGrey,
     textAlign: 'center',
   },
   retryBtn: {
-    marginTop: 4,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#1c1c1e',
-    borderRadius: 8,
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + Spacing.xs,
+    backgroundColor: Colors.pine,
+    borderRadius: Radius.sm,
   },
   retryText: {
-    color: '#6C63FF',
-    fontSize: 15,
+    ...Typography.label,
+    color: Colors.drySage,
     fontWeight: '600',
   },
 })

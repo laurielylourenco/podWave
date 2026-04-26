@@ -8,9 +8,12 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
+import { Ionicons } from '@expo/vector-icons'
 import { useSearchPodcasts } from '@/features/podcasts/hooks/useSearchPodcasts'
 import { PodcastCard } from '@/shared/components/PodcastCard'
+import { ScreenHeader } from '@/shared/components/ScreenHeader'
 import { useDebounce } from '@/shared/hooks/useDebounce'
+import { Colors, Radius, Spacing, Typography } from '@/shared/theme'
 import type { Podcast } from '@/shared/types/podcast'
 
 export default function SearchScreen() {
@@ -32,14 +35,15 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Podwave</Text>
+      <ScreenHeader title="Podwave" subtitle="Descubra seus próximos podcasts favoritos" />
+
+      <View style={styles.searchWrapper}>
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={18} color={Colors.medGrey} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar podcasts..."
-            placeholderTextColor="#636366"
+            placeholderTextColor={Colors.medGrey}
             value={query}
             onChangeText={setQuery}
             returnKeyType="search"
@@ -52,12 +56,12 @@ export default function SearchScreen() {
 
       {isLoading && debouncedQuery.length > 2 ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#6C63FF" />
+          <ActivityIndicator size="large" color={Colors.fern} />
           <Text style={styles.hint}>Buscando podcasts...</Text>
         </View>
       ) : isError ? (
         <View style={styles.centered}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <Ionicons name="warning-outline" size={48} color={Colors.medGrey} />
           <Text style={styles.errorText}>Falha na busca. Verifique sua conexão.</Text>
         </View>
       ) : podcasts && podcasts.length > 0 ? (
@@ -75,16 +79,14 @@ export default function SearchScreen() {
         />
       ) : debouncedQuery.length > 2 ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Ionicons name="mic-outline" size={48} color={Colors.medGrey} />
           <Text style={styles.emptyText}>Nenhum podcast encontrado para "{debouncedQuery}"</Text>
         </View>
       ) : (
         <View style={styles.centered}>
-          <Text style={styles.welcomeIcon}>🎧</Text>
+          <Ionicons name="headset-outline" size={64} color={Colors.pine} />
           <Text style={styles.welcomeTitle}>Descubra podcasts</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Digite ao menos 3 letras para buscar
-          </Text>
+          <Text style={styles.welcomeSubtitle}>Digite ao menos 3 letras para buscar</Text>
         </View>
       )}
     </View>
@@ -94,44 +96,34 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: Colors.appBackground,
   },
-  header: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: '#000',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2c2c2e',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 12,
+  searchWrapper: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    backgroundColor: Colors.appBackground,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchIcon: {
-    fontSize: 16,
+    backgroundColor: Colors.surfaceBg,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.base,
+    height: 52,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.divider,
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
-    fontSize: 16,
+    ...Typography.bodyLg,
+    color: Colors.dustGrey,
     height: '100%',
   },
   grid: {
-    paddingHorizontal: 6,
-    paddingTop: 12,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.sm,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   col: {
     flex: 1,
@@ -140,43 +132,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
   },
   hint: {
-    color: '#8e8e93',
-    fontSize: 15,
-    marginTop: 8,
-  },
-  welcomeIcon: {
-    fontSize: 64,
-    marginBottom: 8,
+    ...Typography.bodySm,
+    marginTop: Spacing.sm,
   },
   welcomeTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
+    ...Typography.headline,
     textAlign: 'center',
   },
   welcomeSubtitle: {
-    color: '#8e8e93',
-    fontSize: 15,
+    ...Typography.bodySm,
     textAlign: 'center',
-  },
-  emptyIcon: {
-    fontSize: 48,
   },
   emptyText: {
-    color: '#8e8e93',
-    fontSize: 15,
+    ...Typography.bodySm,
     textAlign: 'center',
   },
-  errorIcon: {
-    fontSize: 48,
-  },
   errorText: {
-    color: '#ff453a',
-    fontSize: 15,
+    ...Typography.bodySm,
+    color: Colors.error,
     textAlign: 'center',
   },
 })

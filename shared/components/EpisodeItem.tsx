@@ -1,9 +1,13 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Colors, Radius, Spacing, Typography } from '@/shared/theme'
 import type { Episode } from '@/shared/types/podcast'
 
 interface Props {
   episode: Episode
   onPress: (episode: Episode) => void
+  isActive?: boolean
+  isPlaying?: boolean
 }
 
 function formatDuration(seconds: number): string {
@@ -26,21 +30,25 @@ function formatDate(iso: string): string {
   }
 }
 
-export function EpisodeItem({ episode, onPress }: Props) {
+export function EpisodeItem({ episode, onPress, isActive = false, isPlaying = false }: Props) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [
+        styles.row,
+        isActive && styles.rowActive,
+        pressed && styles.rowPressed,
+      ]}
       onPress={() => onPress(episode)}
     >
       {episode.imageUrl ? (
         <Image source={{ uri: episode.imageUrl }} style={styles.artwork} />
       ) : (
         <View style={[styles.artwork, styles.artworkPlaceholder]}>
-          <Text style={styles.placeholderText}>🎵</Text>
+          <Ionicons name="musical-note-outline" size={24} color={Colors.medGrey} />
         </View>
       )}
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={[styles.title, isActive && styles.titleActive]} numberOfLines={2}>
           {episode.title}
         </Text>
         <View style={styles.meta}>
@@ -57,6 +65,14 @@ export function EpisodeItem({ episode, onPress }: Props) {
           </Text>
         ) : null}
       </View>
+
+      {isPlaying ? (
+        <Ionicons name="volume-high" size={24} color={Colors.fern} style={styles.actionIcon} />
+      ) : isActive ? (
+        <Ionicons name="pause-circle-outline" size={32} color={Colors.fern} style={styles.actionIcon} />
+      ) : (
+        <Ionicons name="play-circle-outline" size={32} color={Colors.fern} style={styles.actionIcon} />
+      )}
     </Pressable>
   )
 }
@@ -64,51 +80,57 @@ export function EpisodeItem({ episode, onPress }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2c2c2e',
-    gap: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+    gap: Spacing.md,
+    alignItems: 'center',
+  },
+  rowActive: {
+    backgroundColor: Colors.cardBg,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.fern,
   },
   rowPressed: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.cardBg,
   },
   artwork: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: '#2c2c2e',
+    width: 64,
+    height: 64,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.cardBg,
     flexShrink: 0,
   },
   artworkPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholderText: {
-    fontSize: 28,
-  },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    gap: Spacing.xs,
   },
   title: {
-    color: '#fff',
-    fontSize: 14,
+    ...Typography.bodySm,
+    color: Colors.dustGrey,
     fontWeight: '600',
     lineHeight: 20,
-    marginBottom: 4,
+  },
+  titleActive: {
+    color: Colors.drySage,
   },
   meta: {
     flexDirection: 'row',
-    marginBottom: 4,
   },
   metaText: {
-    color: '#636366',
-    fontSize: 12,
+    ...Typography.caption,
   },
   description: {
-    color: '#8e8e93',
-    fontSize: 12,
-    lineHeight: 17,
+    ...Typography.caption,
+    color: Colors.lightGrey,
+    lineHeight: 16,
+  },
+  actionIcon: {
+    flexShrink: 0,
   },
 })

@@ -1,4 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Colors, Radius, Spacing, Typography } from '@/shared/theme'
 import type { Podcast } from '@/shared/types/podcast'
 
 interface Props {
@@ -16,7 +18,7 @@ export function PodcastCard({ podcast, onPress }: Props) {
         <Image source={{ uri: podcast.imageUrl }} style={styles.artwork} />
       ) : (
         <View style={[styles.artwork, styles.artworkPlaceholder]}>
-          <Text style={styles.placeholderText}>🎙️</Text>
+          <Ionicons name="mic-outline" size={36} color={Colors.medGrey} />
         </View>
       )}
       <View style={styles.info}>
@@ -38,43 +40,39 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 6,
-    borderRadius: 12,
-    backgroundColor: '#1c1c1e',
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.cardBg,
     overflow: 'hidden',
   },
   cardPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.97 }],
+    opacity: 0.8,
+    transform: [{ scale: 0.96 }],
   },
   artwork: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.surfaceBg,
   },
   artworkPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholderText: {
-    fontSize: 40,
-  },
   info: {
-    padding: 10,
+    padding: Spacing.md,
+    gap: Spacing.xs,
   },
   title: {
-    color: '#fff',
-    fontSize: 13,
+    ...Typography.bodySm,
+    color: Colors.dustGrey,
     fontWeight: '600',
-    lineHeight: 18,
-    marginBottom: 3,
+    lineHeight: 19,
   },
   author: {
-    color: '#8e8e93',
-    fontSize: 11,
-    marginBottom: 2,
+    ...Typography.caption,
+    color: Colors.drySage,
   },
   episodes: {
-    color: '#636366',
-    fontSize: 10,
+    ...Typography.caption,
+    color: Colors.fern,
   },
 })

@@ -1,6 +1,9 @@
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { ScreenHeader } from '@/shared/components/ScreenHeader'
 import { useSubscriptionsStore } from '@/store/subscriptionsStore'
+import { Colors, Radius, Spacing, Typography } from '@/shared/theme'
 import type { Podcast } from '@/shared/types/podcast'
 
 export default function SubscriptionsScreen() {
@@ -20,17 +23,17 @@ export default function SubscriptionsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Assinaturas</Text>
-        <Text style={styles.headerSubtitle}>Seus podcasts salvos</Text>
-      </View>
+      <ScreenHeader
+        title="Assinaturas"
+        subtitle={subscriptions.length > 0 ? `${subscriptions.length} podcasts salvos` : undefined}
+      />
 
       {subscriptions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🔖</Text>
+          <Ionicons name="bookmark-outline" size={64} color={Colors.pine} />
           <Text style={styles.emptyTitle}>Nenhuma assinatura ainda</Text>
           <Text style={styles.emptySubtitle}>
-            Busque um podcast na aba “Buscar” e assine para ver ele aqui.
+            Busque um podcast na aba "Buscar" e assine para ver ele aqui.
           </Text>
         </View>
       ) : (
@@ -41,11 +44,13 @@ export default function SubscriptionsScreen() {
           renderItem={({ item }) => (
             <View style={styles.row}>
               {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.artwork} />
+                <Pressable onPress={() => handleOpen(item)}>
+                  <Image source={{ uri: item.imageUrl }} style={styles.artwork} />
+                </Pressable>
               ) : (
-                <View style={[styles.artwork, styles.artworkPlaceholder]}>
-                  <Text style={styles.artworkEmoji}>🎙️</Text>
-                </View>
+                <Pressable onPress={() => handleOpen(item)} style={[styles.artwork, styles.artworkPlaceholder]}>
+                  <Ionicons name="mic-outline" size={28} color={Colors.medGrey} />
+                </Pressable>
               )}
 
               <View style={styles.info}>
@@ -56,10 +61,16 @@ export default function SubscriptionsScreen() {
                   {item.author}
                 </Text>
                 <View style={styles.actions}>
-                  <Pressable onPress={() => handleOpen(item)} style={styles.openBtn}>
+                  <Pressable
+                    onPress={() => handleOpen(item)}
+                    style={({ pressed }) => [styles.openBtn, pressed && styles.btnPressed]}
+                  >
                     <Text style={styles.openText}>Abrir</Text>
                   </Pressable>
-                  <Pressable onPress={() => unsubscribe(item.id)} style={styles.removeBtn}>
+                  <Pressable
+                    onPress={() => unsubscribe(item.id)}
+                    style={({ pressed }) => [styles.removeBtn, pressed && styles.btnPressed]}
+                  >
                     <Text style={styles.removeText}>Remover</Text>
                   </Pressable>
                 </View>
@@ -76,113 +87,91 @@ export default function SubscriptionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  header: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2c2c2e',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    color: '#8e8e93',
-    fontSize: 14,
+    backgroundColor: Colors.appBackground,
   },
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 10,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 6,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
   },
   emptyTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
+    ...Typography.headline,
     textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#8e8e93',
-    fontSize: 15,
+    ...Typography.bodySm,
     textAlign: 'center',
     lineHeight: 22,
   },
   listContent: {
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   row: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2c2c2e',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
   artwork: {
     width: 72,
     height: 72,
-    borderRadius: 10,
-    backgroundColor: '#2c2c2e',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.cardBg,
     flexShrink: 0,
   },
   artworkPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  artworkEmoji: {
-    fontSize: 28,
-  },
   info: {
     flex: 1,
     justifyContent: 'center',
-    gap: 6,
+    gap: Spacing.xs,
   },
   title: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+    ...Typography.bodySm,
+    color: Colors.dustGrey,
+    fontWeight: '600',
     lineHeight: 20,
   },
   author: {
-    color: '#8e8e93',
-    fontSize: 12,
+    ...Typography.caption,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 2,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   openBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#1c1c1e',
-    borderRadius: 8,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.pine,
+    borderRadius: Radius.sm,
   },
   openText: {
-    color: '#6C63FF',
-    fontSize: 13,
-    fontWeight: '700',
+    ...Typography.label,
+    color: Colors.drySage,
+    fontWeight: '600',
   },
   removeBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#1c1c1e',
-    borderRadius: 8,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.divider,
   },
   removeText: {
-    color: '#ff453a',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  btnPressed: {
+    opacity: 0.7,
   },
 })
