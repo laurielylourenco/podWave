@@ -35,6 +35,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4d4a20e4-4951-4272-bebf-5bdac0f70920"
+      }
+    },
+    "owner": "laurioff"
   }
 }
