@@ -21,3 +21,4 @@ index b2409a0..8180cb0 100644
 +            else musicService.tracks[musicService.getCurrentTrackIndex()].originalItem?.let { Arguments.fromBundle(it) }
          )
      }
+ 
