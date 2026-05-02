@@ -3,6 +3,12 @@ name: Build APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,7 +17,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Instalar dependências
@@ -25,14 +31,104 @@ jobs:
       - name: Build APK (EAS)
         run: eas build --platform android --profile preview --non-interactive --wait
 
-      - name: Baixar APK gerado
+      - name: Resolver build deste commit e baixar APK
+        id: eas
+        env:
+          GIT_COMMIT_HASH: ${{ github.sha }}
         run: |
-          APK_URL=$(eas build:list --platform android --limit 1 --status finished --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
-          curl -L "$APK_URL" -o podwave.apk
+          set -euo pipefail
+          json="$(eas build:list --platform android \
+            --git-commit-hash "$GIT_COMMIT_HASH" \
+            --build-profile preview \
+            --status finished \
+            --limit 20 \
+            --json --non-interactive)"
+          count="$(echo "$json" | jq 'length')"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Nenhum build EAS concluído encontrado para este commit (android, profile preview, status finished)."
+            exit 1
+          fi
+          row="$(echo "$json" | jq 'max_by(.createdAt // "")')"
+          build_id="$(echo "$row" | jq -r '.id')"
+          apk_url="$(echo "$row" | jq -r '.artifacts.buildUrl')"
+          eas_app_version="$(echo "$row" | jq -r '.appVersion // empty')"
+          if [ -z "$apk_url" ] || [ "$apk_url" = "null" ]; then
+            echo "::error::URL do artefacto em falta no JSON do build ($build_id)."
+            exit 1
+          fi
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
+          echo "apk_url=$apk_url" >> "$GITHUB_OUTPUT"
+          echo "eas_app_version=$eas_app_version" >> "$GITHUB_OUTPUT"
+          curl -fsSL "$apk_url" -o podwave-download.apk
 
-      - name: Upload APK como artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: podwave-apk
-          path: podwave.apk
-          retention-days: 30
+      - name: Criar GitHub Release com APK
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BUILD_ID: ${{ steps.eas.outputs.build_id }}
+          EAS_APP_VERSION: ${{ steps.eas.outputs.eas_app_version }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("fs");
+          const app = require("./app.json").expo;
+          const appVersion = app.version;
+          const owner = app.owner;
+          const slug = app.slug;
+          const {
+            BUILD_ID,
+            EAS_APP_VERSION = "",
+            GITHUB_REPO,
+            GITHUB_SHA,
+            RUN_NUMBER,
+            RUN_ID,
+          } = process.env;
+
+          if (!BUILD_ID || !GITHUB_REPO || !GITHUB_SHA || !RUN_NUMBER || !RUN_ID) {
+            console.error("Variáveis de ambiente em falta para gerar a release.");
+            process.exit(1);
+          }
+
+          const short = GITHUB_SHA.slice(0, 7);
+          const easVer = EAS_APP_VERSION.trim() || "n/d";
+          const expoUrl = `https://expo.dev/accounts/${owner}/projects/${slug}/builds/${BUILD_ID}`;
+          const tag = `v${appVersion}-android.${RUN_NUMBER}`;
+          const assetName = `Podwave-${appVersion}-android-${RUN_NUMBER}.apk`;
+
+          const bt = "\u0060";
+          const body = [
+            "## Podwave — Android preview",
+            "",
+            `- **Versão app (app.json):** ${bt}${appVersion}${bt}`,
+            `- **Versão no build EAS:** ${bt}${easVer}${bt}`,
+            `- **Commit:** [${bt}${short}${bt}](https://github.com/${GITHUB_REPO}/commit/${GITHUB_SHA})`,
+            `- **Workflow:** [Run #${RUN_NUMBER}](https://github.com/${GITHUB_REPO}/actions/runs/${RUN_ID})`,
+            `- **Build EAS:** [Abrir no Expo](${expoUrl})`,
+            "",
+            "---",
+            "",
+            "Instala o ficheiro APK anexo nesta release (preview).",
+          ].join("\n");
+
+          fs.writeFileSync("release-notes.md", body);
+          fs.renameSync("podwave-download.apk", assetName);
+          fs.writeFileSync(
+            "release-env.txt",
+            [
+              `TAG=${JSON.stringify(tag)}`,
+              `TITLE=${JSON.stringify(`Podwave Android preview v${appVersion} (run ${RUN_NUMBER})`)}`,
+              `ASSET=${JSON.stringify(assetName)}`,
+            ].join("\n") + "\n"
+          );
+          NODE
+          set -a
+          # shellcheck disable=SC1091
+          source release-env.txt
+          set +a
+          gh release create "$TAG" "$ASSET" \
+            --title "$TITLE" \
+            --notes-file release-notes.md \
+            --prerelease
