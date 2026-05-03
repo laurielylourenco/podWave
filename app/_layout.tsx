@@ -9,8 +9,7 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { registerPlaybackService, setupPlayer } from '@/features/player/services/trackPlayerService';
-import playbackService from '@/features/player/services/playbackService';
+import { setupPlayer } from '@/features/player/services/trackPlayerService';
 
 export {
   ErrorBoundary,
@@ -39,11 +38,9 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
-    // TrackPlayer não está disponível no Expo Go; aqui fazemos init “best-effort”.
-    void (async () => {
-      await registerPlaybackService(() => playbackService);
-      await setupPlayer();
-    })();
+    // registerPlaybackService já foi chamado no index.js
+    // Apenas fazemos o setup aqui
+    void setupPlayer();
   }, []);
 
   if (!loaded) {
